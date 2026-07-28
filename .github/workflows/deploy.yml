@@ -1,0 +1,64 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  # Never cancel an in-flight deploy — a half-published site is worse than a slow one.
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: pnpm check
+
+      - name: Build
+        run: pnpm build
+
+      - name: Verify CNAME survived the build
+        # Pages drops the custom domain if CNAME is missing from the artifact,
+        # which silently reverts the site to *.github.io on the next deploy.
+        run: |
+          test -f dist/CNAME || { echo "::error::dist/CNAME missing — custom domain would be dropped"; exit 1; }
+          echo "dist/CNAME = $(cat dist/CNAME)"
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy
+    # Pull requests build and type-check, but only master publishes.
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

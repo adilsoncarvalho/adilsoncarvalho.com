@@ -17,22 +17,29 @@ with DNS hosted in [AWS Route 53](https://aws.amazon.com/route53/).
 
 ## Local development
 
-Requires Node.js 20+ and [pnpm](https://pnpm.io).
+Requires Node.js 22.12+ and [pnpm](https://pnpm.io).
 
 ```sh
 pnpm install     # install dependencies
 pnpm dev         # start the dev server at http://localhost:4321
+pnpm check       # type-check .astro files
 pnpm build       # build the production site into dist/
 pnpm preview     # serve the built site locally
 ```
 
+TypeScript is pinned to 6.x — see [AGENTS.md](AGENTS.md) for why.
+
 ## Deployment
 
-The site is built by GitHub Actions and published to GitHub Pages on every push to `main`.
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) builds and type-checks on
+every push and pull request, and publishes to GitHub Pages on pushes to `master`.
+
+One-time setup: in **Settings → Pages**, set the build source to **GitHub Actions**, then
+enable **Enforce HTTPS** once the custom domain verifies.
 
 For the custom domain to survive each deploy, `public/CNAME` must contain the apex domain
 (`adilsoncarvalho.com`) — Astro copies `public/` verbatim into `dist/`, and GitHub Pages
-reads `CNAME` from the published artifact.
+reads `CNAME` from the published artifact. The build job asserts this rather than trusting it.
 
 ### DNS (Route 53)
 
@@ -43,8 +50,6 @@ In the hosted zone for `adilsoncarvalho.com`:
   [GitHub Pages apex domain docs](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain);
   verify against that page rather than copying them from elsewhere, as they do change.
 - **`www`** — a `CNAME` to `adilsoncarvalho.github.io`.
-
-Enable **Enforce HTTPS** in the repository's Pages settings once the domain verifies.
 
 ## License
 
